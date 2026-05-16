@@ -18,45 +18,55 @@ Serialize the source definition as JSON. Compile it once. Analyze timestamps and
 pip install timegrid
 ```
 
+## API Style
+
+TimeGrid follows Python naming conventions while keeping the original TimeGrid.NET-style names as compatibility aliases.
+
+| Surface | Style | Example |
+| --- | --- | --- |
+| Classes | `PascalCase` | `TimeGridCalendar`, `TimeWindow` |
+| Methods and properties | `snake_case` | `set_closed_window`, `current_window` |
+| Constants | `UPPER_CASE` | `DayOfWeek.MONDAY` |
+
 ## What It Answers
 
 | Question | API |
 | --- | --- |
-| Can this machine work now? | `timeline.Analyze(now).CanWork` |
-| Which state window contains this timestamp? | `analysis.CurrentWindow` |
-| What is the effective capacity? | `analysis.Capacity` |
-| When does the state change? | `analysis.NextTransition` |
-| Why is this timestamp blocked? | `calendar.At(now).Analyze().Matches` |
-| How much usable time exists in a range? | `timeline.GetWorkingDuration(start, end)` |
-| Where is the first slot with enough capacity? | `timeline.FindFirstSlot(start, Hours(2), 3)` |
-| What are many capacities at once? | `timeline.GetCapacitiesAt(instants)` |
-| What is the state of many machines now? | `TimeGridTimelineBatch(machines).GetCapacitiesAt(now)` |
+| Can this machine work now? | `timeline.analyze(now).can_work` |
+| Which state window contains this timestamp? | `analysis.current_window` |
+| What is the effective capacity? | `analysis.capacity` |
+| When does the state change? | `analysis.next_transition` |
+| Why is this timestamp blocked? | `calendar.at(now).analyze().matches` |
+| How much usable time exists in a range? | `timeline.get_working_duration(start, end)` |
+| Where is the first slot with enough capacity? | `timeline.find_first_slot(start, hours(2), 3)` |
+| What are many capacities at once? | `timeline.get_capacities_at(instants)` |
+| What is the state of many machines now? | `TimeGridTimelineBatch(machines).get_capacities_at(now)` |
 
 ## Quick Start
 
 ```python
 from datetime import date, datetime, time
-from timegrid import Hours, TimeGridCalendar
+from timegrid import TimeGridCalendar
 
 month_start = datetime(2026, 1, 1)
 month_end = datetime(2026, 2, 1)
 
 timeline = (
     TimeGridCalendar
-    .Weekdays(time(9), time(18))
-    .BreakWeekdays(time(12), time(13))
-    .Close(date(2026, 1, 1))
-    .Down(datetime(2026, 1, 5, 15), datetime(2026, 1, 5, 16))
-    .Capacity(datetime(2026, 1, 5, 9), datetime(2026, 1, 5, 12), 3)
-    .Compile(month_start, month_end)
+    .weekdays(time(9), time(18))
+    .break_weekdays(time(12), time(13))
+    .close(date(2026, 1, 1))
+    .down(datetime(2026, 1, 5, 15), datetime(2026, 1, 5, 16))
+    .capacity(datetime(2026, 1, 5, 9), datetime(2026, 1, 5, 12), 3)
+    .compile(month_start, month_end)
 )
 
-state = timeline.Analyze(datetime(2026, 1, 5, 10, 30))
+state = timeline.analyze(datetime(2026, 1, 5, 10, 30))
 
-print(state.CanWork)
-print(state.Capacity)
-print(state.CurrentWindow)
-print(state.NextTransition)
+print(state.can_work)
+print(state.capacity)
+print(state.current_window)
+print(state.next_transition)
 ```
 
 ## JSON Definitions
@@ -69,18 +79,18 @@ from timegrid import TimeGridCalendar
 
 calendar = (
     TimeGridCalendar
-    .Weekdays(time(8), time(20))
-    .BreakWeekdays(time(12), time(13))
-    .SetClosedWindow("machine-17-maintenance", down_start, down_end)
-    .SetCapacityWindow("machine-17-boost", boost_start, boost_end, 4)
+    .weekdays(time(8), time(20))
+    .break_weekdays(time(12), time(13))
+    .set_closed_window("machine-17-maintenance", down_start, down_end)
+    .set_capacity_window("machine-17-boost", boost_start, boost_end, 4)
 )
 
-json = calendar.ToJson(indented=True)
+json = calendar.to_json(indented=True)
 
 restored = (
     TimeGridCalendar
-    .FromJson(json)
-    .Compile(month_start, month_end)
+    .from_json(json)
+    .compile(month_start, month_end)
 )
 ```
 
@@ -91,45 +101,47 @@ Use one shared template and add equipment-specific exceptions.
 ```python
 template = (
     TimeGridCalendar
-    .Weekdays(time(9), time(18))
-    .BreakWeekdays(time(12), time(13))
-    .ToDefinition()
+    .weekdays(time(9), time(18))
+    .break_weekdays(time(12), time(13))
+    .to_definition()
 )
 
 machine = (
     template
-    .ToCalendar()
-    .SetClosedWindow("maintenance", maintenance_start, maintenance_end)
-    .SetCapacityWindow("extra-line", boost_start, boost_end, 3)
-    .Compile(month_start, month_end)
+    .to_calendar()
+    .set_closed_window("maintenance", maintenance_start, maintenance_end)
+    .set_capacity_window("extra-line", boost_start, boost_end, 3)
+    .compile(month_start, month_end)
 )
 
-state = machine.Analyze(now)
+state = machine.analyze(now)
 ```
 
 This keeps common schedule rules reusable while each machine carries only its own downtime and capacity changes.
 
 ## Why It Is Fast
 
-Use `Compile(start, end)` for read-heavy systems:
+Use `compile(start, end)` for read-heavy systems:
 
 ```python
-timeline = calendar.Compile(month_start, month_end)
+from timegrid import hours
 
-point = timeline.Analyze(now)
-work = timeline.GetWorkingDuration(day_start, day_end)
-slot = timeline.FindFirstSlot(day_start, Hours(4), minimumCapacity=2)
+timeline = calendar.compile(month_start, month_end)
+
+point = timeline.analyze(now)
+work = timeline.get_working_duration(day_start, day_end)
+slot = timeline.find_first_slot(day_start, hours(4), 2)
 ```
 
 For repeated reads, batch the natural unit of work:
 
 ```python
-capacities = timeline.GetCapacitiesAt(instants)
-analyses = timeline.AnalyzeMany(instants)
+capacities = timeline.get_capacities_at(instants)
+analyses = timeline.analyze_many(instants)
 
 fleet = TimeGridTimelineBatch(machine_timelines)
-fleet_capacities = fleet.GetCapacitiesAt(now)
-fleet_analyses = fleet.Analyze(now)
+fleet_capacities = fleet.get_capacities_at(now)
+fleet_analyses = fleet.analyze(now)
 ```
 
 | Operation | Runtime strategy |
@@ -149,19 +161,19 @@ Common API, one Python call per query:
 
 | Scenario | Operation | Python/Rust | TimeGrid.NET |
 | --- | --- | ---: | ---: |
-| 50,000 compiled state segments | `GetCapacityAt` | 0.152 us/query | 0.053 us/query |
-| 50,000 compiled state segments | `Analyze` | 0.224 us/query | 0.066 us/query |
-| 1,000 compiled machine timelines | `GetCapacityAt` sweep | 122.539 us | 27.202 us |
-| 1,000 compiled machine timelines | `Analyze` sweep | 190.991 us | 33.581 us |
+| 50,000 compiled state segments | `get_capacity_at` | 0.153 us/query | 0.052 us/query |
+| 50,000 compiled state segments | `analyze` | 0.225 us/query | 0.064 us/query |
+| 1,000 compiled machine timelines | `get_capacity_at` sweep | 123.154 us | 26.625 us |
+| 1,000 compiled machine timelines | `analyze` sweep | 189.991 us | 34.463 us |
 
 Batch API, one Python call per batch:
 
 | Scenario | Operation | Python/Rust |
 | --- | --- | ---: |
-| 50,000 compiled state segments | `GetCapacitiesAt` | 0.074 us/query |
-| 50,000 compiled state segments | `AnalyzeMany` | 0.219 us/query |
-| 1,000 compiled machine timelines | `TimeGridTimelineBatch.GetCapacitiesAt` sweep | 27.962 us |
-| 1,000 compiled machine timelines | `TimeGridTimelineBatch.Analyze` sweep | 120.159 us |
+| 50,000 compiled state segments | `get_capacities_at` | 0.076 us/query |
+| 50,000 compiled state segments | `analyze_many` | 0.220 us/query |
+| 1,000 compiled machine timelines | `TimeGridTimelineBatch.get_capacities_at` sweep | 28.342 us |
+| 1,000 compiled machine timelines | `TimeGridTimelineBatch.analyze` sweep | 118.398 us |
 
 Measurements exclude compile time and run against already compiled timelines. Common API checksums matched TimeGrid.NET at `14277834`; the combined Common + Batch verification checksum was `28681706`. Batch capacity queries remove most Python method-dispatch overhead, while analysis still pays for creating Python result objects.
 
@@ -187,10 +199,10 @@ return capacity > 0
 With TimeGrid, rules are data and queries stay small:
 
 ```python
-analysis = timeline.Analyze(now)
+analysis = timeline.analyze(now)
 
-if analysis.CanWork:
-    print(f"capacity: {analysis.Capacity}")
+if analysis.can_work:
+    print(f"capacity: {analysis.capacity}")
 ```
 
 ## Named Timeline Entries
@@ -198,16 +210,16 @@ if analysis.CanWork:
 ```python
 calendar = (
     TimeGridCalendar
-    .Create()
-    .SetOpenWindow("shift-a", start, end)
-    .SetClosedWindow("maintenance", down_start, down_end)
-    .SetCapacityWindow("line-boost", boost_start, boost_end, 4)
+    .create()
+    .set_open_window("shift-a", start, end)
+    .set_closed_window("maintenance", down_start, down_end)
+    .set_capacity_window("line-boost", boost_start, boost_end, 4)
 )
 
-maintenance = calendar.GetEntry("maintenance")
+maintenance = calendar.get_entry("maintenance")
 
-calendar.SetClosedWindow("maintenance", new_down_start, new_down_end)
-calendar.RemoveEntry("maintenance")
+calendar.set_closed_window("maintenance", new_down_start, new_down_end)
+calendar.remove_entry("maintenance")
 ```
 
 ## Good Fit
@@ -234,20 +246,20 @@ calendar.RemoveEntry("maintenance")
 <summary>Direct APIs</summary>
 
 ```python
-calendar.CanWork(now)
-calendar.GetCapacityAt(now)
-calendar.GetWindowsAt(now)
-calendar.GetPreviousTransitionTime(now)
-calendar.GetNextTransitionTime(now)
-calendar.GetOpenWindows(start, end)
-calendar.GetUnavailableWindows(start, end)
-calendar.GetStateWindows(start, end)
-calendar.GetWorkingDuration(start, end)
-calendar.FindFirstSlot(start, Hours(2), minimumCapacity=2)
-timeline.GetCapacitiesAt(instants)
-timeline.AnalyzeMany(instants)
-TimeGridTimelineBatch(timelines).GetCapacitiesAt(now)
-TimeGridTimelineBatch(timelines).Analyze(now)
+calendar.can_work(now)
+calendar.get_capacity_at(now)
+calendar.get_windows_at(now)
+calendar.get_previous_transition_time(now)
+calendar.get_next_transition_time(now)
+calendar.get_open_windows(start, end)
+calendar.get_unavailable_windows(start, end)
+calendar.get_state_windows(start, end)
+calendar.get_working_duration(start, end)
+calendar.find_first_slot(start, hours(2), 2)
+timeline.get_capacities_at(instants)
+timeline.analyze_many(instants)
+TimeGridTimelineBatch(timelines).get_capacities_at(now)
+TimeGridTimelineBatch(timelines).analyze(now)
 ```
 
 </details>

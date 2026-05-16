@@ -11,6 +11,8 @@ from timegrid import (
     TimeGridTimelineBatch,
     TimeGridWindowKind,
     TimeWindow,
+    hours,
+    minutes,
 )
 
 
@@ -206,3 +208,33 @@ def test_cross_midnight_rules():
 def test_duration_helpers():
     assert Hours(8) == timedelta(hours=8)
     assert Minutes(30) == timedelta(minutes=30)
+    assert hours(8) == timedelta(hours=8)
+    assert minutes(30) == timedelta(minutes=30)
+
+
+def test_pythonic_snake_case_api_surface():
+    timeline = (
+        TimeGridCalendar.weekdays(time(9), time(18))
+        .break_weekdays(time(12), time(13))
+        .close(date(2026, 1, 1))
+        .down(day(5, 15), day(5, 16))
+        .capacity(day(5, 9), day(5, 12), 3)
+        .compile(day(1), day(31))
+    )
+    analysis = timeline.analyze(day(5, 10, 30))
+
+    assert analysis.can_work
+    assert analysis.capacity == 3
+    assert analysis.current_window.start == day(5, 9)
+    assert timeline.get_capacities_at([day(5, 10, 30), day(5, 12, 30)]) == [3, 0]
+
+    fleet = TimeGridTimelineBatch.create([timeline])
+    assert fleet.count == 1
+    assert fleet.get_capacities_at(day(5, 10, 30)) == [3]
+    assert fleet.analyze(day(5, 10, 30))[0].capacity == 3
+
+    calendar = TimeGridCalendar.create().add_open_rule(DayOfWeek.MONDAY, time(9), time(10))
+    assert calendar.open_rules[0].day == DayOfWeek.MONDAY
+    assert DayOfWeek.MONDAY == DayOfWeek.Monday
+    assert TimeGridEntryKind.CLOSED == TimeGridEntryKind.Closed
+    assert TimeGridWindowKind.CAPACITY_OVERRIDE == TimeGridWindowKind.CapacityOverride

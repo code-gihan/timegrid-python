@@ -3200,7 +3200,7 @@ fn Seconds<'py>(py: Python<'py>, value: i64) -> PyResult<Bound<'py, PyDelta>> {
 
 #[pymodule]
 fn timegrid(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add("__version__", "0.1.1")?;
+    m.add("__version__", "0.1.2")?;
     m.add_class::<DayOfWeek>()?;
     m.add_class::<TimeGridEntryKind>()?;
     m.add_class::<TimeGridWindowKind>()?;
@@ -3223,5 +3223,322 @@ fn timegrid(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(Hours, m)?)?;
     m.add_function(wrap_pyfunction!(Minutes, m)?)?;
     m.add_function(wrap_pyfunction!(Seconds, m)?)?;
+    m.add_function(wrap_pyfunction!(hours, m)?)?;
+    m.add_function(wrap_pyfunction!(minutes, m)?)?;
+    m.add_function(wrap_pyfunction!(seconds, m)?)?;
+    add_pythonic_aliases(m)?;
+    Ok(())
+}
+
+#[pyfunction]
+fn hours<'py>(py: Python<'py>, value: i64) -> PyResult<Bound<'py, PyDelta>> {
+    Hours(py, value)
+}
+
+#[pyfunction]
+fn minutes<'py>(py: Python<'py>, value: i64) -> PyResult<Bound<'py, PyDelta>> {
+    Minutes(py, value)
+}
+
+#[pyfunction]
+fn seconds<'py>(py: Python<'py>, value: i64) -> PyResult<Bound<'py, PyDelta>> {
+    Seconds(py, value)
+}
+
+fn add_pythonic_aliases(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    alias_attrs(
+        m,
+        "TimeWindow",
+        &[
+            ("Start", "start"),
+            ("End", "end"),
+            ("Duration", "duration"),
+            ("IsEmpty", "is_empty"),
+            ("Contains", "contains"),
+            ("Overlaps", "overlaps"),
+            ("Intersect", "intersect"),
+        ],
+    )?;
+    alias_attrs(
+        m,
+        "TimeGridWeeklyRule",
+        &[
+            ("Day", "day"),
+            ("Start", "start"),
+            ("End", "end"),
+            ("Contains", "contains"),
+            ("ToWindow", "to_window"),
+        ],
+    )?;
+    alias_attrs(
+        m,
+        "TimeGridCapacityWindow",
+        &[("Window", "window"), ("Capacity", "capacity")],
+    )?;
+    alias_attrs(
+        m,
+        "DayOfWeek",
+        &[
+            ("Sunday", "SUNDAY"),
+            ("Monday", "MONDAY"),
+            ("Tuesday", "TUESDAY"),
+            ("Wednesday", "WEDNESDAY"),
+            ("Thursday", "THURSDAY"),
+            ("Friday", "FRIDAY"),
+            ("Saturday", "SATURDAY"),
+        ],
+    )?;
+    alias_attrs(
+        m,
+        "TimeGridEntryKind",
+        &[
+            ("Open", "OPEN"),
+            ("Closed", "CLOSED"),
+            ("Capacity", "CAPACITY"),
+        ],
+    )?;
+    alias_attrs(
+        m,
+        "TimeGridWindowKind",
+        &[
+            ("Available", "AVAILABLE"),
+            ("Unavailable", "UNAVAILABLE"),
+            ("OpenRule", "OPEN_RULE"),
+            ("OpenWindow", "OPEN_WINDOW"),
+            ("BreakRule", "BREAK_RULE"),
+            ("ClosedWindow", "CLOSED_WINDOW"),
+            ("CapacityOverride", "CAPACITY_OVERRIDE"),
+        ],
+    )?;
+    alias_attrs(
+        m,
+        "TimeGridEntry",
+        &[
+            ("Id", "id"),
+            ("Kind", "kind"),
+            ("Window", "window"),
+            ("Capacity", "capacity"),
+        ],
+    )?;
+    alias_attrs(
+        m,
+        "TimeGridCalendar",
+        &[
+            ("DefaultCapacity", "default_capacity"),
+            ("IsComposite", "is_composite"),
+            ("Components", "components"),
+            ("OpenRules", "open_rules"),
+            ("BreakRules", "break_rules"),
+            ("OpenWindows", "open_windows"),
+            ("ClosedWindows", "closed_windows"),
+            ("CapacityOverrides", "capacity_overrides"),
+            ("Entries", "entries"),
+            ("Create", "create"),
+            ("Weekdays", "weekdays"),
+            ("Window", "window"),
+            ("Intersect", "intersect"),
+            ("And", "and_"),
+            ("At", "at"),
+            ("Between", "between"),
+            ("Compile", "compile"),
+            ("ToDefinition", "to_definition"),
+            ("ToJson", "to_json"),
+            ("FromDefinition", "from_definition"),
+            ("FromJson", "from_json"),
+            ("Analyze", "analyze"),
+            ("SetDefaultCapacity", "set_default_capacity"),
+            ("Capacity", "capacity"),
+            ("AddOpenRule", "add_open_rule"),
+            ("AddWeekdayOpenRule", "add_weekday_open_rule"),
+            ("OpenWeekdays", "open_weekdays"),
+            ("AddBreakRule", "add_break_rule"),
+            ("AddWeekdayBreakRule", "add_weekday_break_rule"),
+            ("BreakWeekdays", "break_weekdays"),
+            ("AddOpenWindow", "add_open_window"),
+            ("Open", "open"),
+            ("AddHoliday", "add_holiday"),
+            ("Close", "close"),
+            ("AddDowntime", "add_downtime"),
+            ("Down", "down"),
+            ("AddClosedWindow", "add_closed_window"),
+            ("AddCapacityOverride", "add_capacity_override"),
+            ("SetOpenWindow", "set_open_window"),
+            ("SetClosedWindow", "set_closed_window"),
+            ("SetCapacityWindow", "set_capacity_window"),
+            ("GetEntry", "get_entry"),
+            ("RemoveEntry", "remove_entry"),
+            ("ClearOpenRules", "clear_open_rules"),
+            ("ClearOpenWindows", "clear_open_windows"),
+            ("ClearBreakRules", "clear_break_rules"),
+            ("ClearClosedWindows", "clear_closed_windows"),
+            ("ClearCapacityOverrides", "clear_capacity_overrides"),
+            ("ClearEntries", "clear_entries"),
+            ("Clear", "clear"),
+            ("CanWork", "can_work"),
+            ("HasCapacity", "has_capacity"),
+            ("GetCapacityAt", "get_capacity_at"),
+            ("GetNextOpenTime", "get_next_open_time"),
+            ("AddWorkDuration", "add_work_duration"),
+            ("TraceWorkDuration", "trace_work_duration"),
+            ("GetWorkingDuration", "get_working_duration"),
+            ("GetWorkingTicks", "get_working_ticks"),
+            ("GetOpenWindows", "get_open_windows"),
+            ("GetCapacityWindows", "get_capacity_windows"),
+            ("GetUnavailableWindows", "get_unavailable_windows"),
+            ("GetStateWindows", "get_state_windows"),
+            ("GetWindowsAt", "get_windows_at"),
+            ("GetCurrentOpenWindow", "get_current_open_window"),
+            (
+                "GetCurrentUnavailableWindow",
+                "get_current_unavailable_window",
+            ),
+            ("GetNextTransitionTime", "get_next_transition_time"),
+            ("GetPreviousTransitionTime", "get_previous_transition_time"),
+            ("GetNearestTransitionTime", "get_nearest_transition_time"),
+            ("FindFirstSlot", "find_first_slot"),
+        ],
+    )?;
+    alias_attrs(
+        m,
+        "TimeGridStateWindow",
+        &[
+            ("Window", "window"),
+            ("Capacity", "capacity"),
+            ("CanWork", "can_work"),
+        ],
+    )?;
+    alias_attrs(
+        m,
+        "TimeGridWindowMatch",
+        &[
+            ("Kind", "kind"),
+            ("Window", "window"),
+            ("Capacity", "capacity"),
+        ],
+    )?;
+    alias_attrs(
+        m,
+        "TimeGridInstantAnalysis",
+        &[
+            ("Instant", "instant"),
+            ("Capacity", "capacity"),
+            ("CurrentWindow", "current_window"),
+            ("PreviousTransition", "previous_transition"),
+            ("NextTransition", "next_transition"),
+            ("Matches", "matches"),
+            ("CanWork", "can_work"),
+        ],
+    )?;
+    alias_attrs(
+        m,
+        "TimeGridTimelineAnalysis",
+        &[
+            ("Window", "window"),
+            ("Segments", "segments"),
+            ("WorkingDuration", "working_duration"),
+            ("WorkingTicks", "working_ticks"),
+        ],
+    )?;
+    alias_attrs(
+        m,
+        "WorkingTimeTraceStep",
+        &[("Window", "window"), ("Duration", "duration")],
+    )?;
+    alias_attrs(
+        m,
+        "WorkingTimeTrace",
+        &[
+            ("Start", "start"),
+            ("RequestedDuration", "requested_duration"),
+            ("Result", "result"),
+            ("Steps", "steps"),
+            ("RequestedTicks", "requested_ticks"),
+            ("ConsumedTicks", "consumed_ticks"),
+        ],
+    )?;
+    alias_attrs(
+        m,
+        "TimeGridPointQuery",
+        &[
+            ("CanWork", "can_work"),
+            ("HasCapacity", "has_capacity"),
+            ("GetCapacity", "get_capacity"),
+            ("Analyze", "analyze"),
+            ("GetWindows", "get_windows"),
+            ("GetCurrentOpenWindow", "get_current_open_window"),
+            (
+                "GetCurrentUnavailableWindow",
+                "get_current_unavailable_window",
+            ),
+            ("GetNextTransitionTime", "get_next_transition_time"),
+            ("GetPreviousTransitionTime", "get_previous_transition_time"),
+            ("GetNearestTransitionTime", "get_nearest_transition_time"),
+            ("GetNextOpenTime", "get_next_open_time"),
+            ("AddWorkDuration", "add_work_duration"),
+            ("TraceWorkDuration", "trace_work_duration"),
+        ],
+    )?;
+    alias_attrs(
+        m,
+        "TimeGridRangeQuery",
+        &[
+            ("GetOpenWindows", "get_open_windows"),
+            ("GetUnavailableWindows", "get_unavailable_windows"),
+            ("GetStateWindows", "get_state_windows"),
+            ("Analyze", "analyze"),
+            ("GetWorkingDuration", "get_working_duration"),
+            ("GetWorkingTicks", "get_working_ticks"),
+            ("GetCapacityWindows", "get_capacity_windows"),
+            ("CanWork", "can_work"),
+            ("HasCapacity", "has_capacity"),
+            ("FindFirstSlot", "find_first_slot"),
+        ],
+    )?;
+    alias_attrs(
+        m,
+        "TimeGridTimeline",
+        &[
+            ("Window", "window"),
+            ("GetCapacityAt", "get_capacity_at"),
+            ("GetCapacitiesAt", "get_capacities_at"),
+            ("CanWork", "can_work"),
+            ("Analyze", "analyze"),
+            ("AnalyzeMany", "analyze_many"),
+            ("AnalyzeRange", "analyze_range"),
+            ("GetStateWindows", "get_state_windows"),
+            ("GetOpenWindows", "get_open_windows"),
+            ("GetUnavailableWindows", "get_unavailable_windows"),
+            ("GetCapacityWindows", "get_capacity_windows"),
+            ("GetWorkingDuration", "get_working_duration"),
+            ("FindFirstSlot", "find_first_slot"),
+        ],
+    )?;
+    alias_attrs(
+        m,
+        "TimeGridTimelineBatch",
+        &[
+            ("Create", "create"),
+            ("Count", "count"),
+            ("GetCapacitiesAt", "get_capacities_at"),
+            ("Analyze", "analyze"),
+        ],
+    )?;
+    alias_attrs(
+        m,
+        "TimeGridDefinition",
+        &[
+            ("ToCalendar", "to_calendar"),
+            ("ToJson", "to_json"),
+            ("FromJson", "from_json"),
+        ],
+    )?;
+    Ok(())
+}
+
+fn alias_attrs(m: &Bound<'_, PyModule>, class_name: &str, pairs: &[(&str, &str)]) -> PyResult<()> {
+    let class = m.getattr(class_name)?;
+    for (source, target) in pairs {
+        class.setattr(*target, class.getattr(*source)?)?;
+    }
     Ok(())
 }

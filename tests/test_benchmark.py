@@ -45,19 +45,19 @@ def run_quick_query_perf() -> QuickQueryResult:
     checksum = 0
 
     start = day(5, 0)
-    calendar = TimeGridCalendar.Create().Open(start, start + timedelta(minutes=50_000))
+    calendar = TimeGridCalendar.create().open(start, start + timedelta(minutes=50_000))
 
     for index in range(50_000):
         minute = start + timedelta(minutes=index)
-        calendar.Capacity(minute, minute + timedelta(minutes=1), (index % 7) + 1)
+        calendar.capacity(minute, minute + timedelta(minutes=1), (index % 7) + 1)
 
-    timeline = calendar.Compile(start, start + timedelta(minutes=50_000))
+    timeline = calendar.compile(start, start + timedelta(minutes=50_000))
     instants = [start + timedelta(minutes=index, seconds=1) for index in range(50_000)]
 
     def run_get_capacity(count: int) -> int:
         total = 0
         length = len(instants)
-        get_capacity = timeline.GetCapacityAt
+        get_capacity = timeline.get_capacity_at
         for index in range(count):
             total += get_capacity(instants[index % length])
         return total
@@ -65,9 +65,9 @@ def run_quick_query_perf() -> QuickQueryResult:
     def run_analyze(count: int) -> int:
         total = 0
         length = len(instants)
-        analyze = timeline.Analyze
+        analyze = timeline.analyze
         for index in range(count):
-            total += analyze(instants[index % length]).Capacity
+            total += analyze(instants[index % length]).capacity
         return total
 
     checksum += run_get_capacity(WARMUP_COUNT)
@@ -82,16 +82,16 @@ def run_quick_query_perf() -> QuickQueryResult:
 
     def run_batch_get_capacity(rounds: int) -> int:
         total = 0
-        get_capacities = timeline.GetCapacitiesAt
+        get_capacities = timeline.get_capacities_at
         for _ in range(rounds):
             total += sum(get_capacities(instants))
         return total
 
     def run_batch_analyze(rounds: int) -> int:
         total = 0
-        analyze_many = timeline.AnalyzeMany
+        analyze_many = timeline.analyze_many
         for _ in range(rounds):
-            total += sum(analysis.Capacity for analysis in analyze_many(instants))
+            total += sum(analysis.capacity for analysis in analyze_many(instants))
         return total
 
     checksum += run_batch_get_capacity(1)
@@ -109,17 +109,17 @@ def run_quick_query_perf() -> QuickQueryResult:
     checksum += value
 
     template = (
-        TimeGridCalendar.Weekdays(time(9), time(18))
-        .BreakWeekdays(time(12), time(13))
-        .ToDefinition()
+        TimeGridCalendar.weekdays(time(9), time(18))
+        .break_weekdays(time(12), time(13))
+        .to_definition()
     )
     horizon_start = day(5, 0)
     horizon_end = day(12, 0)
     machines = [
-        template.ToCalendar()
-        .SetClosedWindow(f"machine-{index}-maintenance", day(5, 10), day(5, 11))
-        .SetCapacityWindow(f"machine-{index}-capacity", day(5, 13), day(5, 15), 2 + (index % 3))
-        .Compile(horizon_start, horizon_end)
+        template.to_calendar()
+        .set_closed_window(f"machine-{index}-maintenance", day(5, 10), day(5, 11))
+        .set_capacity_window(f"machine-{index}-capacity", day(5, 13), day(5, 15), 2 + (index % 3))
+        .compile(horizon_start, horizon_end)
         for index in range(1_000)
     ]
     probe = day(5, 13, 30)
@@ -129,14 +129,14 @@ def run_quick_query_perf() -> QuickQueryResult:
         total = 0
         length = len(machines)
         for index in range(count):
-            total += machines[index % length].GetCapacityAt(probe)
+            total += machines[index % length].get_capacity_at(probe)
         return total
 
     def run_machines_analyze(count: int) -> int:
         total = 0
         length = len(machines)
         for index in range(count):
-            total += machines[index % length].Analyze(probe).Capacity
+            total += machines[index % length].analyze(probe).capacity
         return total
 
     checksum += run_machines_get_capacity(WARMUP_COUNT)
@@ -151,16 +151,16 @@ def run_quick_query_perf() -> QuickQueryResult:
 
     def run_batch_machines_get_capacity(rounds: int) -> int:
         total = 0
-        get_capacities = machine_batch.GetCapacitiesAt
+        get_capacities = machine_batch.get_capacities_at
         for _ in range(rounds):
             total += sum(get_capacities(probe))
         return total
 
     def run_batch_machines_analyze(rounds: int) -> int:
         total = 0
-        analyze = machine_batch.Analyze
+        analyze = machine_batch.analyze
         for _ in range(rounds):
-            total += sum(analysis.Capacity for analysis in analyze(probe))
+            total += sum(analysis.capacity for analysis in analyze(probe))
         return total
 
     checksum += run_batch_machines_get_capacity(1)
