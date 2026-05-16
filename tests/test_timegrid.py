@@ -8,6 +8,7 @@ from timegrid import (
     Minutes,
     TimeGridCalendar,
     TimeGridEntryKind,
+    TimeGridTimelineBatch,
     TimeGridWindowKind,
     TimeWindow,
 )
@@ -106,6 +107,32 @@ def test_compiled_timeline_matches_calendar():
     assert timeline.FindFirstSlot(day(5, 8), Hours(2)) == TimeWindow(day(5, 9), day(5, 11))
     assert timeline.Analyze(day(5, 12, 30)).CurrentWindow == TimeWindow(day(5, 12), day(5, 13))
     assert timeline.Analyze(day(5, 8), day(5, 18)).WorkingDuration == Hours(8)
+
+
+def test_compiled_timeline_batch_queries_match_common_api():
+    timeline = workday().Capacity(day(5, 10), day(5, 11), 3).Compile(day(5, 8), day(5, 18))
+    instants = [day(5, 8, 30), day(5, 10, 30), day(5, 12, 30), day(5, 14, 30)]
+
+    assert timeline.GetCapacitiesAt(instants) == [timeline.GetCapacityAt(instant) for instant in instants]
+    assert [analysis.Capacity for analysis in timeline.AnalyzeMany(instants)] == [
+        timeline.Analyze(instant).Capacity for instant in instants
+    ]
+
+
+def test_timeline_batch_queries_multiple_timelines():
+    factory = TimeGridCalendar.Create().OpenWeekdays(time(9), time(18)).Capacity(5)
+    machine = TimeGridCalendar.Create().Open(day(5, 10), day(5, 16)).Capacity(
+        day(5, 13), day(5, 16), 2
+    )
+    timelines = [
+        factory.Compile(day(5, 0), day(6, 0)),
+        machine.Compile(day(5, 0), day(6, 0)),
+    ]
+    batch = TimeGridTimelineBatch(timelines)
+
+    assert batch.Count == 2
+    assert batch.GetCapacitiesAt(day(5, 13, 30)) == [5, 2]
+    assert [analysis.Capacity for analysis in batch.Analyze(day(5, 13, 30))] == [5, 2]
 
 
 def test_json_roundtrip_uses_source_definition():

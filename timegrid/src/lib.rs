@@ -2342,6 +2342,13 @@ impl TimeGridTimeline {
         Ok(self.state_at(instant)?.capacity)
     }
 
+    fn GetCapacitiesAt(&self, instants: Vec<NaiveDateTime>) -> PyResult<Vec<i32>> {
+        instants
+            .into_iter()
+            .map(|instant| Ok(self.state_at(instant)?.capacity))
+            .collect()
+    }
+
     fn CanWork(&self, instant: NaiveDateTime) -> PyResult<bool> {
         Ok(self.GetCapacityAt(instant)? > 0)
     }
@@ -2363,6 +2370,18 @@ impl TimeGridTimeline {
             }
         }
         timeline_instant_analysis(self, py, instant, includeMatches)
+    }
+
+    #[pyo3(signature = (instants, includeMatches=false))]
+    fn AnalyzeMany(
+        &self,
+        instants: Vec<NaiveDateTime>,
+        includeMatches: bool,
+    ) -> PyResult<Vec<TimeGridInstantAnalysis>> {
+        instants
+            .into_iter()
+            .map(|instant| self.instant_analysis(instant, includeMatches))
+            .collect()
     }
 
     fn AnalyzeRange(
@@ -2483,6 +2502,27 @@ impl TimeGridTimeline {
         Ok(self.states[self.state_index_at(instant)?])
     }
 
+    fn instant_analysis(
+        &self,
+        instant: NaiveDateTime,
+        include_matches: bool,
+    ) -> PyResult<TimeGridInstantAnalysis> {
+        let index = self.state_index_at(instant)?;
+        let state = self.states[index];
+        Ok(TimeGridInstantAnalysis {
+            instant,
+            capacity: state.capacity,
+            current_window: Some(state.window),
+            previous_transition: self.previous_transition(index, instant),
+            next_transition: self.next_transition(index, instant),
+            matches: if include_matches {
+                self.source.get_windows_at(instant, None)?
+            } else {
+                Vec::new()
+            },
+        })
+    }
+
     fn state_index_at(&self, instant: NaiveDateTime) -> PyResult<usize> {
         if instant < self.window.start || instant >= self.window.end {
             return Err(PyValueError::new_err(
@@ -2591,24 +2631,55 @@ fn timeline_instant_analysis(
     instant: NaiveDateTime,
     include_matches: bool,
 ) -> PyResult<Py<PyAny>> {
-    let index = timeline.state_index_at(instant)?;
-    let state = timeline.states[index];
-    Ok(Py::new(
-        py,
-        TimeGridInstantAnalysis {
-            instant,
-            capacity: state.capacity,
-            current_window: Some(state.window),
-            previous_transition: timeline.previous_transition(index, instant),
-            next_transition: timeline.next_transition(index, instant),
-            matches: if include_matches {
-                timeline.source.get_windows_at(instant, None)?
-            } else {
-                Vec::new()
-            },
-        },
-    )?
-    .into_any())
+    Ok(Py::new(py, timeline.instant_analysis(instant, include_matches)?)?.into_any())
+}
+
+#[pyclass(module = "timegrid")]
+#[derive(Clone, Debug)]
+pub struct TimeGridTimelineBatch {
+    timelines: Vec<TimeGridTimeline>,
+}
+
+#[pymethods]
+impl TimeGridTimelineBatch {
+    #[new]
+    fn new(timelines: &Bound<'_, PyAny>) -> PyResult<Self> {
+        let mut result = Vec::new();
+        for item in timelines.try_iter()? {
+            let timeline = item?.extract::<PyRef<TimeGridTimeline>>()?;
+            result.push((*timeline).clone());
+        }
+        Ok(Self { timelines: result })
+    }
+
+    #[staticmethod]
+    fn Create(timelines: &Bound<'_, PyAny>) -> PyResult<Self> {
+        Self::new(timelines)
+    }
+
+    #[getter]
+    fn Count(&self) -> usize {
+        self.timelines.len()
+    }
+
+    fn GetCapacitiesAt(&self, instant: NaiveDateTime) -> PyResult<Vec<i32>> {
+        self.timelines
+            .iter()
+            .map(|timeline| timeline.GetCapacityAt(instant))
+            .collect()
+    }
+
+    #[pyo3(signature = (instant, includeMatches=false))]
+    fn Analyze(
+        &self,
+        instant: NaiveDateTime,
+        includeMatches: bool,
+    ) -> PyResult<Vec<TimeGridInstantAnalysis>> {
+        self.timelines
+            .iter()
+            .map(|timeline| timeline.instant_analysis(instant, includeMatches))
+            .collect()
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -3129,7 +3200,7 @@ fn Seconds<'py>(py: Python<'py>, value: i64) -> PyResult<Bound<'py, PyDelta>> {
 
 #[pymodule]
 fn timegrid(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add("__version__", "0.1.0")?;
+    m.add("__version__", "0.1.1")?;
     m.add_class::<DayOfWeek>()?;
     m.add_class::<TimeGridEntryKind>()?;
     m.add_class::<TimeGridWindowKind>()?;
@@ -3142,6 +3213,7 @@ fn timegrid(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<TimeGridPointQuery>()?;
     m.add_class::<TimeGridRangeQuery>()?;
     m.add_class::<TimeGridTimeline>()?;
+    m.add_class::<TimeGridTimelineBatch>()?;
     m.add_class::<TimeGridInstantAnalysis>()?;
     m.add_class::<TimeGridTimelineAnalysis>()?;
     m.add_class::<TimeGridStateWindow>()?;

@@ -1,6 +1,6 @@
 [package]
 name = "timegrid"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "A lightweight compiled timeline engine for operational availability, downtime, capacity, and JSON-backed definitions."
 license = "MIT"

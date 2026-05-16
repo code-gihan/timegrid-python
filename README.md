@@ -29,6 +29,8 @@ pip install timegrid
 | Why is this timestamp blocked? | `calendar.At(now).Analyze().Matches` |
 | How much usable time exists in a range? | `timeline.GetWorkingDuration(start, end)` |
 | Where is the first slot with enough capacity? | `timeline.FindFirstSlot(start, Hours(2), 3)` |
+| What are many capacities at once? | `timeline.GetCapacitiesAt(instants)` |
+| What is the state of many machines now? | `TimeGridTimelineBatch(machines).GetCapacitiesAt(now)` |
 
 ## Quick Start
 
@@ -119,6 +121,17 @@ work = timeline.GetWorkingDuration(day_start, day_end)
 slot = timeline.FindFirstSlot(day_start, Hours(4), minimumCapacity=2)
 ```
 
+For repeated reads, batch the natural unit of work:
+
+```python
+capacities = timeline.GetCapacitiesAt(instants)
+analyses = timeline.AnalyzeMany(instants)
+
+fleet = TimeGridTimelineBatch(machine_timelines)
+fleet_capacities = fleet.GetCapacitiesAt(now)
+fleet_analyses = fleet.Analyze(now)
+```
+
 | Operation | Runtime strategy |
 | --- | --- |
 | Point analysis | Binary search over compiled state segments |
@@ -126,19 +139,31 @@ slot = timeline.FindFirstSlot(day_start, Hours(4), minimumCapacity=2)
 | Transition lookup | Segment boundary lookup |
 | Working duration | Sum usable segment durations |
 | Slot search | Scan continuous capacity-matching segments |
+| Batch point queries | One Python call, Rust loop over compiled timelines |
 | JSON | Rust `serde` source definition serialization |
 
 Local quick-query benchmark on CPython 3.12, Windows 10, Rust release wheel.
-The scenario matches the TimeGrid.NET `QuickQueryPerf` benchmark: 50,000 compiled state segments, 1,000 compiled machine timelines, 20,000 warmup calls, and 1,000,000 measured calls.
+The common scenario matches the TimeGrid.NET `QuickQueryPerf` benchmark: 50,000 compiled state segments, 1,000 compiled machine timelines, 20,000 warmup calls, and 1,000,000 measured calls.
+
+Common API, one Python call per query:
 
 | Scenario | Operation | Python/Rust | TimeGrid.NET |
 | --- | --- | ---: | ---: |
-| 50,000 compiled state segments | `GetCapacityAt` | 0.152 us/query | 0.052 us/query |
-| 50,000 compiled state segments | `Analyze` | 0.222 us/query | 0.063 us/query |
-| 1,000 compiled machine timelines | `GetCapacityAt` sweep | 125.774 us | 27.125 us |
-| 1,000 compiled machine timelines | `Analyze` sweep | 193.897 us | 34.818 us |
+| 50,000 compiled state segments | `GetCapacityAt` | 0.152 us/query | 0.053 us/query |
+| 50,000 compiled state segments | `Analyze` | 0.224 us/query | 0.066 us/query |
+| 1,000 compiled machine timelines | `GetCapacityAt` sweep | 122.539 us | 27.202 us |
+| 1,000 compiled machine timelines | `Analyze` sweep | 190.991 us | 33.581 us |
 
-Measurements exclude compile time and run against already compiled timelines. The Python/Rust checksum and TimeGrid.NET checksum both produced `14277834`; the remaining gap is dominated by Python call overhead, `datetime` conversion, PyO3 boundary crossing, and Python result-object creation for per-query calls.
+Batch API, one Python call per batch:
+
+| Scenario | Operation | Python/Rust |
+| --- | --- | ---: |
+| 50,000 compiled state segments | `GetCapacitiesAt` | 0.074 us/query |
+| 50,000 compiled state segments | `AnalyzeMany` | 0.219 us/query |
+| 1,000 compiled machine timelines | `TimeGridTimelineBatch.GetCapacitiesAt` sweep | 27.962 us |
+| 1,000 compiled machine timelines | `TimeGridTimelineBatch.Analyze` sweep | 120.159 us |
+
+Measurements exclude compile time and run against already compiled timelines. Common API checksums matched TimeGrid.NET at `14277834`; the combined Common + Batch verification checksum was `28681706`. Batch capacity queries remove most Python method-dispatch overhead, while analysis still pays for creating Python result objects.
 
 ## Before / After
 
@@ -219,6 +244,10 @@ calendar.GetUnavailableWindows(start, end)
 calendar.GetStateWindows(start, end)
 calendar.GetWorkingDuration(start, end)
 calendar.FindFirstSlot(start, Hours(2), minimumCapacity=2)
+timeline.GetCapacitiesAt(instants)
+timeline.AnalyzeMany(instants)
+TimeGridTimelineBatch(timelines).GetCapacitiesAt(now)
+TimeGridTimelineBatch(timelines).Analyze(now)
 ```
 
 </details>
