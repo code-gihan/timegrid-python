@@ -1,0 +1,18 @@
+[package]
+name = "timegrid"
+version = "0.1.0"
+edition = "2024"
+description = "A lightweight compiled timeline engine for operational availability, downtime, capacity, and JSON-backed definitions."
+license = "MIT"
+repository = "https://github.com/code-gihan/timegrid-python"
+readme = "../README.md"
+
+[lib]
+name = "timegrid"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+pyo3 = { version = "0.27", features = ["extension-module", "chrono"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
