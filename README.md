@@ -128,13 +128,17 @@ slot = timeline.FindFirstSlot(day_start, Hours(4), minimumCapacity=2)
 | Slot search | Scan continuous capacity-matching segments |
 | JSON | Rust `serde` source definition serialization |
 
-Local benchmark on CPython 3.12, Windows 10, Rust release build:
+Local quick-query benchmark on CPython 3.12, Windows 10, Rust release wheel.
+The scenario matches the TimeGrid.NET `QuickQueryPerf` benchmark: 50,000 compiled state segments, 1,000 compiled machine timelines, 20,000 warmup calls, and 1,000,000 measured calls.
 
-| Scenario | Operation | Result |
-| --- | --- | ---: |
-| 10,000 compiled state segments | `GetCapacityAt` | 0.259 us/query |
+| Scenario | Operation | Python/Rust | TimeGrid.NET |
+| --- | --- | ---: | ---: |
+| 50,000 compiled state segments | `GetCapacityAt` | 0.152 us/query | 0.052 us/query |
+| 50,000 compiled state segments | `Analyze` | 0.222 us/query | 0.063 us/query |
+| 1,000 compiled machine timelines | `GetCapacityAt` sweep | 125.774 us | 27.125 us |
+| 1,000 compiled machine timelines | `Analyze` sweep | 193.897 us | 34.818 us |
 
-Measurements exclude compile time and run against an already compiled timeline.
+Measurements exclude compile time and run against already compiled timelines. The Python/Rust checksum and TimeGrid.NET checksum both produced `14277834`; the remaining gap is dominated by Python call overhead, `datetime` conversion, PyO3 boundary crossing, and Python result-object creation for per-query calls.
 
 ## Before / After
 
