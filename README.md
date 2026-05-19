@@ -33,8 +33,8 @@ For supported platforms, `pip` automatically selects the matching prebuilt wheel
 | macOS | Intel x86_64 and Apple Silicon arm64 | CPython 3.9+ | Prebuilt `universal2` wheel |
 
 The wheels use Python's stable ABI (`abi3`), so one wheel per OS/architecture supports
-CPython 3.9 and newer. Other platforms or architectures can still install from the source
-distribution when a Rust toolchain is available.
+CPython 3.9 and newer. Platforms or architectures not listed above are not shipped as
+prebuilt wheels yet; build from a source checkout with Rust when you need another target.
 
 ## 30-Second Example
 

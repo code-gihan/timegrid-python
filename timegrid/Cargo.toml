@@ -1,6 +1,6 @@
 [package]
 name = "timegrid"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2024"
 description = "Business-hours, availability, downtime, capacity, and SLA working-time calculations for Python, powered by Rust."
 license = "MIT"
