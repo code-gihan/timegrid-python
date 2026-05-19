@@ -3200,7 +3200,7 @@ fn Seconds<'py>(py: Python<'py>, value: i64) -> PyResult<Bound<'py, PyDelta>> {
 
 #[pymodule]
 fn timegrid(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add("__version__", "0.1.2")?;
+    m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add_class::<DayOfWeek>()?;
     m.add_class::<TimeGridEntryKind>()?;
     m.add_class::<TimeGridWindowKind>()?;

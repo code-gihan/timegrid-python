@@ -24,6 +24,18 @@ schedule, simulate, dispatch, or report.
 pip install timegrid
 ```
 
+For supported platforms, `pip` automatically selects the matching prebuilt wheel from PyPI.
+
+| Operating system | CPU architecture | Python | Wheel support |
+| --- | --- | --- | --- |
+| Windows | x86_64 / AMD64 | CPython 3.9+ | Prebuilt `win_amd64` wheel |
+| Linux | x86_64 / AMD64 | CPython 3.9+ | Prebuilt `manylinux2014_x86_64` wheel |
+| macOS | Intel x86_64 and Apple Silicon arm64 | CPython 3.9+ | Prebuilt `universal2` wheel |
+
+The wheels use Python's stable ABI (`abi3`), so one wheel per OS/architecture supports
+CPython 3.9 and newer. Other platforms or architectures can still install from the source
+distribution when a Rust toolchain is available.
+
 ## 30-Second Example
 
 Calculate an SLA due date while skipping lunch, nights, weekends, and one-off closures:
