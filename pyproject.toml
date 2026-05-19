@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "timegrid"
-version = "0.1.4"
+version = "0.1.5"
 description = "Business-hours, availability, downtime, capacity, and SLA working-time calculations for Python, powered by Rust."
 readme = "README.md"
 requires-python = ">=3.9"
